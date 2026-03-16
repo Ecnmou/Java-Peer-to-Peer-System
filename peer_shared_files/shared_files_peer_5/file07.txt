@@ -1,0 +1,380 @@
+
+
+
+
+#---Choosing 5 companies to work with, basic data info
+data = data[company=="AA" | company=="OO" | company=="WN" | company=="YV" | company=="F9", ]
+head(data)
+str(data)
+
+
+
+#---Cancellations
+table(data$UniqueCarrier)
+tapply(data$Cancelled, data$UniqueCarrier, sum)
+tapply(data$Cancelled, data$UniqueCarrier, mean)
+
+
+
+#---Filtering(I'm going to work with flights that did happen, and with specific variables)
+data = data[data$Cancelled==0, c(1:4,6,8:13,16:21)]
+
+
+
+#---useful functions
+skew<-function(x)
+{
+  n<-length(x)
+  z<-(x-mean(x))/sd(x)
+  return(sum(z^3)/n)
+}
+kurtosis<-function(x)
+{
+  n<-length(x)
+  z<-(x-mean(x))/sd(x)
+  return( (sum(z^4)/n) - 3 )
+}
+GetDescrStats<-function(x)
+{
+  return(list("Missing Values"=sum(is.na(x)), "Summary"=summary(x),
+              "Standard Deviation"=sd(x), "Skew"=skew(x), "Kurtosis"=kurtosis(x)))
+}
+
+
+
+#---NA replacement 
+#With the respective mean values for ArrDelay, DepDelay in order
+#to avoid throwing away information and with 0 for Delay reasons
+m1 = round(mean(na.omit(data$ArrDelay)))
+m2 = round(mean(na.omit(data$DepDelay)))
+
+data[is.na(data$ArrDelay), "ArrDelay"] = m1
+data[is.na(data$DepDelay), "DepDelay"] = m2
+
+for(i in 13:17)
+{
+  current = data[[i]]
+  current[is.na(current)] = 0
+  data[[i]] = current
+}
+
+
+
+
+#---Descriptive Measures for quantinative variables
+GetDescrStats(data$ArrDelay)
+GetDescrStats(data$DepDelay)
+GetDescrStats(data$Distance)
+
+GetDescrStats(data$CarrierDelay)
+GetDescrStats(data$WeatherDelay)
+GetDescrStats(data$NASDelay)
+GetDescrStats(data$SecurityDelay)
+GetDescrStats(data$LateAircraftDelay)
+
+
+
+
+#---Arrival Delays
+EarlyArr = data[data$ArrDelay<0, c("UniqueCarrier", "ArrDelay")]
+LateArr = data[data$ArrDelay>0, c("UniqueCarrier", "ArrDelay")]
+
+tapply(EarlyArr$ArrDelay, EarlyArr$UniqueCarrier, mean)
+tapply(LateArr$ArrDelay, LateArr$UniqueCarrier, mean)
+tapply(data$ArrDelay, data$UniqueCarrier, mean)
+
+
+
+
+#---Departure Delays
+EarlyDep = data[data$DepDelay<0, c("UniqueCarrier", "DepDelay")]
+LateDep = data[data$DepDelay>0, c("UniqueCarrier", "DepDelay")]
+
+tapply(EarlyDep$DepDelay, EarlyDep$UniqueCarrier, mean)
+tapply(LateDep$DepDelay, LateDep$UniqueCarrier, mean)
+tapply(data$DepDelay, data$UniqueCarrier, mean)
+
+
+
+
+#---total flights and mean delays per some categorical variables(Month, DayOfWeek etc)
+table(data$UniqueCarrier, data$Month)
+tapply(data$ArrDelay, data$Month, mean)
+tapply(data$DepDelay, data$Month, mean)
+
+table(data$UniqueCarrier, data$DayofMonth)
+tapply(data$ArrDelay, data$DayofMonth, mean)
+tapply(data$DepDelay, data$DayofMonth, mean)
+
+table(data$UniqueCarrier, data$DayOfWeek)
+tapply(data$ArrDelay, data$DayOfWeek, mean)
+tapply(data$DepDelay, data$DayOfWeek, mean)
+
+table(data$UniqueCarrier, data$Diverted)
+tapply(data$ArrDelay, data$Diverted, mean)
+tapply(data$DepDelay, data$Diverted, mean)
+
+
+
+#---Flights per hour(eg from 18.00 to 18.59)
+table(data$DepTime-data$DepTime%%100)
+table(data$ArrTime-data$ArrTime%%100)
+
+
+
+#---boxplots: quantitative variables per category of each categorical variable
+par(mfrow=c(1, 3))
+for(response in c("ArrDelay", "DepDelay", "Distance"))
+  boxplot(data[, response] ~ UniqueCarrier, data, xlab="Company", ylab=response)
+
+par(mfrow=c(1, 2))
+for(response in c("ArrDelay", "DepDelay"))
+  boxplot(data[, response] ~ Month, data, xlab="Month", ylab=response)
+
+for(response in c("ArrDelay", "DepDelay"))
+  boxplot(data[, response] ~ DayOfWeek, data, xlab="DayOfWeek", ylab=response)
+
+
+
+
+#---Scatterplots with the use of ellipses, I use a sample of my data(1/50).
+#The first one is for all the companies, the second per company the only for
+#the delay reasons(without ellipses)
+scatterplotMatrix(~ ArrDelay + DepDelay + Distance,
+                  data=data[1:1000,], smooth=FALSE, reg.line=FALSE, ellipse=TRUE,
+                  by.groups=TRUE, diagonal="none")
+
+scatterplotMatrix(~ ArrDelay + DepDelay + Distance | UniqueCarrier,
+                  data=data[1:1000,], smooth=FALSE, reg.line=FALSE, ellipse=TRUE,
+                  by.groups=TRUE, diagonal="none")
+
+scatterplotMatrix(~ CarrierDelay + WeatherDelay + NASDelay + SecurityDelay + LateAircraftDelay,
+                  data=data[1:1000,], smooth=FALSE, reg.line=FALSE)
+
+
+
+
+#---Multivariate Normality tests, relative plots
+
+checknorm<-function(x){
+  n<-dim(x)[1]
+  p<-dim(x)[2]
+  s<-var(x)
+  xbar <- apply(x,2,mean)
+  r<-rep(NA,n)
+  for (i in 1:n) {
+    r[i]<- t((x[i,])-xbar)%*%solve(s)%*%((x[i,])-xbar)
+  }
+  r<-r*(n-p)/(n*p)
+  r<-sort(r)
+  fr<-pf(r,p,n-p)
+  plot(fr,(1:n)/n,xlab="Theoretical",ylab="Empirical")
+  abline(0,1)
+}
+
+ArrDep = as.matrix(data[,c("ArrDelay", "DepDelay")])
+
+A=as.matrix(cbind(log(data$ArrDelay), log(data$DepDelay)))
+#NaN, Inf removal
+A=A[( !is.na(A[,1]) & !is.na(A[,2]) & !is.infinite(A[,1]) & !is.infinite(A[,2]) ), ] 
+
+checknorm(ArrDep)
+checknorm(A)
+
+B = as.matrix(rbind(data$ArrDelay[1:5000], data$DepDelay[1:5000]))
+mshapiro.test(B)
+
+
+
+
+
+#----------------------------- SECOND PART -----------------------------#
+
+
+#---------------1---------------#
+
+data1 = data[, c("DayOfWeek", "UniqueCarrier", "ArrDelay", "DepDelay")]
+
+#-------altogether-------#
+Mon_Fri = data1[(data1$DayOfWeek!=6 & data1$DayOfWeek!=7), c("ArrDelay", "DepDelay")]
+Sat_Sun = data1[(data1$DayOfWeek==6 | data1$DayOfWeek==7), c("ArrDelay", "DepDelay")]
+
+day = ifelse(data$DayOfWeek<6,0,1)
+day = factor(day, labels=c("Weekday", "Weekend"))
+BoxMTest(data[ ,c("ArrDelay", "DepDelay")], day, 0.05)
+
+hotel2<-function(x1,x2) {
+  n1 <- dim(x1)[1]
+  n2 <- dim(x2)[1]
+  pp <- dim(x1)[2]
+  dfden <- (n1 + n2 - pp - 1)
+  c1 <- (n1 * n2)/(n1 + n2)
+  c2 <- (n1 + n2 - 2)*pp
+  x1bar <- t(x1) %*% rep(1, dim(x1)[1])/dim(x1)[1]
+  x2bar <- t(x2) %*% rep(1, dim(x2)[1])/dim(x2)[1]
+  s1<-var(x1)
+  s2<-var(x2)
+  spooled<- ((n1-1)*s1 + (n2-1)* s2)/(n1+n2-2)
+  teststat<-t(x1bar-x2bar)%*%solve(spooled)%*%(x1bar-x2bar)
+  teststat<-teststat * dfden * c1 /c2
+  pvalue<-1-pf(teststat,pp,dfden)
+  list(stat=teststat,pvalue=pvalue,meanvector1=x1bar,meanvector2=x2bar,pooledvariancematrix=spooled,
+       df1=pp,df2=dfden)
+}
+hotel2(Mon_Fri, Sat_Sun)
+
+
+#-------separately-------#
+l = split(data1, data1$UniqueCarrier)
+n = length(l)
+results = list()
+
+for(i in 1:n)
+{
+  buffer = as.data.frame(l[[i]])
+  Mon_Fri = buffer[(buffer$DayOfWeek!=6 & buffer$DayOfWeek!=7), c("ArrDelay", "DepDelay")]
+  Sat_Sun = buffer[(buffer$DayOfWeek==6 | buffer$DayOfWeek==7), c("ArrDelay", "DepDelay")]
+  results[[i]] = hotel2(Mon_Fri, Sat_Sun)
+}
+names(results)=names(l)
+
+results$AA
+results$F9
+results$OO
+results$WN
+results$YV
+
+
+
+
+#---------------2---------------#
+
+data2 = data[, c("UniqueCarrier", "ArrDelay", "DepDelay",
+                 "CarrierDelay","WeatherDelay", "NASDelay",
+                 "SecurityDelay", "LateAircraftDelay")]
+
+
+#-------Interpretation 1-------#
+
+BoxMTest(data2[ ,c("CarrierDelay","WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay")], 
+         as.factor(data2$UniqueCarrier), 0.05)
+
+manv2 = manova(as.matrix(data2[,-(1:3)]) ~ data2$UniqueCarrier)
+
+summary(manv2)
+summary(manv2,test="Hotelling")
+summary(manv2,test="Wilks")
+aov(manv2)
+
+
+
+#-------Interpretation 2-------#
+
+data2$DelayCause = 0
+i = 0
+
+for(delay in c("CarrierDelay","WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay"))
+{
+  data2$DelayCause[data2[ ,delay]>0] = data2$DelayCause[data2[ ,delay]>0] + 10^i
+  i = i+1
+}
+#10100 = there is NASDelay and LateAircraftDelay
+
+data2$DelayCause = as.factor(data2$DelayCause)
+results2 = list()
+j = 1
+v = c("AA", "F9", "OO", "WN", "YV")
+
+for(company in v)
+{
+  rows = (data2$UniqueCarrier==company)
+  results2[[j]] = manova( as.matrix(data2[rows, c("ArrDelay", "DepDelay")]) ~ data2[rows, "DelayCause"] )
+  j = j+1
+}
+names(results2) = v
+
+manvAA = results2$AA
+manvF9 = results2$F9
+manvOO = results2$OO
+manvWN = results2$WN
+manvYV = results2$YV
+
+summary(manvAA)
+summary(manvAA,test="Hotelling")
+summary(manvAA,test="Wilks")
+aov(manvAA)
+
+summary(manvF9)
+summary(manvF9,test="Hotelling")
+summary(manvF9,test="Wilks")
+aov(manvF9)
+
+summary(manvOO)
+summary(manvOO,test="Hotelling")
+summary(manvOO,test="Wilks")
+aov(manvOO)
+
+summary(manvWN)
+summary(manvWN,test="Hotelling")
+summary(manvWN,test="Wilks")
+aov(manvWN)
+
+summary(manvYV)
+summary(manvYV,test="Hotelling")
+summary(manvYV,test="Wilks")
+aov(manvYV)
+
+
+
+
+#---------------3---------------#
+
+data3 = data[, c("UniqueCarrier", "ArrDelay", "DepDelay")]
+
+BoxMTest(data3[ ,c("ArrDelay", "DepDelay")], 
+         as.factor(data3$UniqueCarrier), 0.05)
+
+manv3 = manova(as.matrix(data3[ ,c("ArrDelay", "DepDelay")]) ~ data3$UniqueCarrier)
+
+summary(manv3)
+summary(manv3, test="Hotelling")
+summary(manv3, test="Wilks")
+aov(manv3)
+
+
+
+
+#---------------4---------------#
+
+data4 = data[, 1:12]
+data4$Origin = as.factor(data4$Origin)
+data4$Dest = as.factor(data4$Dest)
+data4$DepHour = as.factor(data4$DepTime-data4$DepTime%%100)
+data4$ArrHour = as.factor(data4$ArrTime-data4$ArrTime%%100)
+head(data4)
+
+myModel = lm(cbind(ArrDelay, DepDelay) ~ Month + DayofMonth 
+               + DayOfWeek + UniqueCarrier + Origin + Dest +
+               Distance + Diverted + DepHour + ArrHour, data=data4)
+
+x = summary(myModel)
+
+names(which(x$`Response ArrDelay`$coefficients[,4]<0.05)) 
+#requested characteristics for Arrival Delays
+
+names(which(x$`Response DepDelay`$coefficients[,4]<0.05)) 
+#requested characteristics for Departure Delays
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,177 @@
+#-----Model Fitting
+
+par(mfrow=c(1, 1))
+data = data[,-1] #ID column removal(no additional info)
+#-----centralizing quantitative variables (not applied after all)
+testData = data
+#testData$Age = testData$Age - mean(testData$Age)
+#testData$Years_of_residence = testData$Years_of_residence - mean(testData$Years_of_residence)
+
+#full, null, without intercept models
+fullmodel = lm(Income~., testData)
+nullmodel = lm(Income~1, testData)
+model = update(fullmodel,.~.-1)
+
+summary(fullmodel)
+summary(model) #I'll work with this, R=0.77>0.2
+
+
+#-----Conditions
+#normality -> NO
+stdmodel = rstandard(model)
+shapiro.test(stdmodel) 
+lillie.test(stdmodel) 
+
+#homoskedasticity -> NO
+quantcut = function(x, digits=6) { cut(x, breaks=quantile(x), include.lowest=TRUE, dig.lab=digits) }
+qfits = quantcut(model$fit)
+leveneTest(stdmodel, qfits) 
+
+#NOT correlation -> YES
+dwt(model)
+durbinWatsonTest(model)
+
+
+#-----Transformation needed, firstly I aim at fixing heteroscedasticity because is more important and it affects normality too.
+#-----Out of all the tranformations applied(y'=1/y or ln(y) or arcsin(sqrt(y)) or...), the best was y' = sqrt(y). 
+#-----WLS could be used too, but it solely fixes heteroscedasticity and not normality
+#model with all 3 conditions
+model = lm(sqrt(Income) ~ Gender + Vote + Political_orientation + Age + Marital_Status + Years_of_residence - 1, testData)
+stdmodel = rstandard(model)
+
+#normality -> YES
+shapiro.test(stdmodel) 
+lillie.test(stdmodel)
+plot(model, which=2)
+
+#homoskedasticity -> YES
+qfits = quantcut(model$fit)
+leveneTest(stdmodel, qfits)
+plot(model, which=1, pch=16, lwd=1.5)
+plot(model, which=3, pch=16, lwd=1.5)
+plot(model$fit, stdmodel, ylim = c(-4, 4), pch=16)
+abline(h= 1.96, col='red', lwd=2, lty=2)
+abline(h=-1.96, col='red', lwd=2, lty=2)
+
+#NOT correlation -> YES
+dwt(model)
+durbinWatsonTest(model)
+
+summary(model)
+model
+
+
+#-----Variable selection, all possible combinations of stepwise procedures
+n = dim(data)[1]
+#stepwise
+modelstep = step(model, direction = "both", k = 2) #AIC
+modelstep2 = step(model, direction = "both", k = log(n)) #BIC
+modelstep3 = step(nullmodel, scope=list(lower=nullmodel, upper=model), direction = "both", k = 2) #AIC
+modelstep4 = step(nullmodel, scope=list(lower=nullmodel, upper=model), direction = "both", k = log(n)) #BIC
+
+#backward
+modelstep5 = step(model, direction = "back", k = 2) #AIC
+modelstep6 = step(model, direction = "back", k = log(n)) #BIC
+
+#forward
+modelstep7 = step(nullmodel, scope=list(lower=nullmodel, upper=model), direction = "forward", k = 2) #AIC
+modelstep8 = step(nullmodel, scope=list(lower=nullmodel, upper=model), direction = "forward", k = log(n)) #BIC
+
+
+#-----Multicollinearity, updating existing possible models
+vif(model)#
+newmodel = update(model,.~.-Gender)
+vif(modelstep)#
+modelstep = update(modelstep,.~.-Gender)
+vif(modelstep2)#
+modelstep2 = update(modelstep2,.~.-Gender)
+vif(modelstep3)
+vif(modelstep4)
+vif(modelstep5)#
+modelstep5 = update(modelstep5,.~.-Gender)
+vif(modelstep6)#
+modelstep6 = update(modelstep6,.~.-Gender)
+vif(modelstep7)
+vif(modelstep8)
+
+
+#-----Choosing the optimal model, still model which might have a multicollinearity problem, yet is the  
+#-----only model that's fulfilling all 3 conditions and with slightly lower AIC, BIC than the others 
+BIC(model, newmodel, modelstep, modelstep2, modelstep3, modelstep4, modelstep5, modelstep6, modelstep7, modelstep8)
+AIC(model, newmodel, modelstep, modelstep2, modelstep3, modelstep4, modelstep5, modelstep6, modelstep7, modelstep8)
+#-----still very large AIC, BIC values
+
+model
+summary(model)
+
+#-----Linearity - Tukey Test - applying square to my model?
+residualPlots(model)
+sqModel = lm(sqrt(Income) ~ Gender + Vote + Political_orientation + 
+               I(Age^2) + Marital_Status + I(Years_of_residence^2) - 1, testData)
+summary(sqModel)
+AIC(sqModel)
+BIC(sqModel)
+#R^2adj is similar, so are the AIC, BIC values so it's not worth adding a squared term
+
+
+#-----Outliers(high-leverage points) - Influential Points
+plot(model, which = 4)
+abline(h = 4/(1000-19-1) , col = "red3")
+plot(model, which=5)
+plot(model, which=6)
+#Tried removing outliers, (like obs.521 with leverage=1) yet there was no significance difference to the model
+
+
+#-----Adding interactions to the model that might optimize it but it doesn't seem improve, no need to check for
+#-----conditions since I'm not going to use it
+check = lm(sqrt(Income) ~ Gender + Vote + Political_orientation + Age + Marital_Status + Years_of_residence + 
+         Years_of_residence:Vote + Years_of_residence:Political_orientation + Vote:Political_orientation - 1, testData)
+summary(check)
+AIC(check)
+BIC(check)
+
+
+#-----Removing Age, Years of residence and finalizing the model
+check2 = lm(sqrt(Income) ~ Gender + Vote + Political_orientation + Marital_Status - 1, testData)
+summary(check2)
+vif(check2)
+AIC(check2)
+BIC(check2)
+
+#normality -> YES
+shapiro.test(rstandard(check2)) 
+lillie.test(rstandard(check2))
+plot(check2, which=2)
+
+#homoskedasticity -> YES
+qfits = quantcut(check2$fit)
+leveneTest(rstandard(check2), qfits)
+plot(check2, which=1, pch=16, lwd=1.5)
+plot(check2, which=3, pch=16, lwd=1.5)
+plot(check2$fit, rstandard(check2), ylim = c(-4, 4), pch=16)
+abline(h= 1.96, col='red', lwd=2, lty=2)
+abline(h=-1.96, col='red', lwd=2, lty=2)
+
+#NOT correlation -> YES
+dwt(check2)
+durbinWatsonTest(check2)
+
+#Outliers(high-leverage points) - Influential Points
+plot(model, which = 4)
+abline(h = 4/(1000-19-1) , col = "red3")
+plot(model, which=5)
+plot(model, which=6)
+
+finalModel = check2
+finalModel 
+summary(finalModel) 
+
+
+
+
+
+
+
+
+
+

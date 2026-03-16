@@ -1,0 +1,167 @@
+al difference from the null model
+null = aov(Wgt ~ 1, data1)
+main.effects = aov(Wgt ~ Gest + Smoke, data1) 
+anova(null, main.effects) #F-test 
+
+
+
+#-----Condition checking
+#homoscedasticity ok
+leveneTest(main.effects$res ~ data1$Gest*data1$Smoke)
+leveneTest(main.effects$res ~ data1$Gest)
+leveneTest(main.effects$res ~ data1$Smoke)
+plot(main.effects$fit, rstandard(main.effects), pch=16, bty='l')
+
+#normality ok
+par(mfrow=c(1,1))
+qqnorm(main.effects$res,  pch=16, bty='l')
+qqline(main.effects$res, col='red', lwd=1.5)
+lillie.test(main.effects$res)
+shapiro.test(main.effects$res)
+
+
+
+#-----model without interactions
+main.effects = aov(Wgt ~ Gest + Smoke, data1)
+par(mfrow=c(1,2))
+interaction.plot(data1$Smoke, data1$Gest, data1$Wgt, type='o', pch=16, legend=F, lty=1:3, bty='l', col=1:9)
+interaction.plot(data1$Smoke, data1$Gest, main.effects$fit, col=1:9, pch=16, type='o', legend=F, lty=1:3, bty='l')
+
+
+
+#-----model with interactions
+interaction_model = lm(Wgt ~ Gest * Smoke, data1)
+anova(interaction_model) #interaction NOT significant
+
+
+
+#-----Condition checking
+#homoscedasticity ok
+leveneTest(Wgt ~ Gest * Smoke, data=data1)
+
+#normality ok
+qqnorm(interaction_model$res,  pch=16, bty='l')
+qqline(interaction_model$res, col='red', lwd=1.5)
+lillie.test(interaction_model$res)
+shapiro.test(interaction_model$res)
+
+
+
+#-----comparing models
+a0<-aov(Wgt ~ 1, data=data1)
+a1<-aov(Wgt ~ Smoke, data=data1)
+a2<-aov(Wgt ~ Gest, data=data1)
+a3<-aov(Wgt ~ Gest + Smoke, data=data1)
+a4<-aov(Wgt ~ Gest * Smoke, data=data1)
+
+AIC(a0,a1,a2,a3,a4)
+BIC(a0,a1,a2,a3,a4)
+#I choose a3
+
+model = lm(Wgt ~ Gest + Smoke, data=data1)
+summary(model)
+
+
+
+#Explanation
+#Intercept: a baby's expected weight when it's mother wasn't a smoker and her pregnancy lasted 34 weeks.
+
+#Gest35: between two non-smoking mothers, the one who's pregnancy lasted 35 weeks is expected to have a baby 157.88gr heavier than the baby of the one who's pregnancy lasted 34 weeks
+
+#Same for the other Gest variables
+
+#Smokeyes: between two babies whoses mothers pregnancies lasted 34 weeks, the one with the smoker mother is expected to weight 244.63gr less than the other(the non-smoker mother's baby).
+
+
+
+
+
+#--------------------------- 2 ---------------------------#
+
+weight = factor(rep(c(rep(1,4), rep(2,4), rep(3,4)), 2))
+levels(weight) = c("Underweight","Normal","Overweight")
+
+smoker = factor(c(rep(1,12),rep(2,12)))
+levels(smoker) = c("no","yes")
+
+Chol = c(140, 127, 173, 111, 175, 210, 180, 206, 228, 220, 242, 233,
+         185, 196, 187, 220, 214, 177, 212, 198, 253, 260, 273, 284)
+
+data2<-data.frame(Chol, weight, smoker)
+
+shapiro.test(data2$Chol) #normality OK
+
+
+
+#-----Linear Models
+model1 = lm(Chol~weight, data)
+summary(model1)
+anova(model1)
+boxplot(Chol~weight)
+
+model2 = lm(Chol~smoker, data)
+summary(model2)
+anova(model2)
+boxplot(Chol~smoker)
+#for a=0.05 both variables have an effect on cholesterol
+
+
+
+#-----Multiple linear model
+model3 = lm(Chol~weight+smoker)
+summary(model3)
+anova(model3)
+#both factors have a statictically significant effect
+
+
+
+#-----Multiple linear model with interactions
+par(mfrow=c(2,1))
+interaction.plot(smoker, weight, Chol)
+interaction.plot(weight, smoker, Chol)
+model4 = lm(Chol~weight*smoker) 
+summary(model4)
+anova(model4)
+#both factors and their (interaction? = weight:smoker) 
+#have a statictically significant effect for a=0.05 
+
+
+
+#-----Choosing model
+anova(model1,model3,model4)
+anova(model2,model3,model4)
+BIC(model1,model2,model3,model4)
+AIC(model1,model2,model3,model4)
+#I choose model 4
+
+
+
+#-----Checking conditions
+#normality 
+anova4 = aov(Chol~weight*smoker)
+shapiro.test(anova4$res)#ok
+
+#homoskedasticity 
+par(mfrow=c(1,1))
+leveneTest(Chol~weight*smoker) #ok 
+plot(model4$fitted, rstandard(model4))
+summary(model4)
+
+
+
+#Explanations
+#Intercept: cholesterol's expected value for an underweight, non-smoker is 137.55
+
+#weightNormal: between 2 non-smokers, a normal(weight) person is expected to have higher cholesterol from an underweight one. 55 cholesterol units higher
+
+#weightOverweight: between 2 non-smokers, an overweight person is expected to have higher cholesterol from an underweight one. 93 cholesterol units higher
+
+#smokeryes: between 2 underweight people, a smoker is expected to have higher cholesterol from a non-smoker. 59 cholesterol units higher
+
+#weightNormal:smokeryes: the total expected difference between normal(weight) smokers and non-smokers because of the interaction OR
+#the total expected difference between underweight smokers and normal(weight) smokers because of the interaction
+
+#weightOverweight:smokeryes: the total expected difference between overweight smokers and non-smokers because of the interaction OR
+#the total expected difference between underweight smokers and overweight smokers because of the interaction
+
+

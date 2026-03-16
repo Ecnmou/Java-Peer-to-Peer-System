@@ -1,0 +1,256 @@
+#------------------ Quantitative Variables ------------------#
+
+par(mfrow=c(1, 1))
+chart.Correlation(data[, c("Age", "Years_of_residence", "Income")], histogram=TRUE, pch=19)
+
+
+
+
+#------------------ Categorical Variables ------------------#
+
+gender = data$Gender
+vote = data$Vote
+orien = data$Political_orientation
+marriage = data$Marital_Status
+
+tabGV = table(gender, vote)
+tabGO = table(gender, orien)
+tabGM = table(gender, marriage)
+tabVO = table(vote, orien)
+tabVM = table(vote, marriage)
+tabOM = table(orien, marriage)
+
+tabGV
+prop.table(tabGV)
+fisher.test(gender, vote, simulate.p.value=TRUE)
+chisq.test(gender, vote, simulate.p.value=TRUE)
+barplot(tabGV, main="Gender/Vote Plot", ylim=c(0, 350), xlab="Vote", ylab="Frequency", col=1:2)
+legend("topright", legend=levels(gender), pch=15, col=1:2, cex=0.8)
+
+tabGO
+prop.table(tabGO)
+fisher.test(gender, orien, simulate.p.value=TRUE)
+chisq.test(gender, orien, simulate.p.value=TRUE)
+barplot(tabGO, main="Gender/Political_Orientation Plot", ylim=c(0, 300), xlab="Orientation", ylab="Frequency", col=1:2)
+legend("topright", legend=levels(gender), pch=15, col=1:2, cex=0.8)
+
+tabGM
+prop.table(tabGM)
+fisher.test(gender, marriage, simulate.p.value=TRUE)
+chisq.test(gender, marriage, simulate.p.value=TRUE)
+barplot(tabGM, main="Gender/Marital_Status Plot", ylim=c(0, 500), xlab="Marital Status", ylab="Frequency", col=1:2)
+legend("topright", legend=levels(gender), pch=15, col=1:2, cex=0.8)
+
+tabVO
+prop.table(tabVO)
+fisher.test(vote, orien, simulate.p.value=TRUE)
+chisq.test(vote, orien, simulate.p.value=TRUE)
+barplot(tabVO, main="Vote/Political_Orientation Plot", ylim=c(0, 300), xlab="Orientation", ylab="Frequency", col=1:6)
+legend("topright", legend=levels(vote), pch=15, col=1:6, cex=0.8)
+
+tabVM
+prop.table(tabVM)
+fisher.test(vote, marriage, simulate.p.value=TRUE)
+chisq.test(vote, marriage, simulate.p.value=TRUE)
+barplot(tabVM, main="Vote/Marital_Status Plot", ylim=c(0, 500), xlab="Marital Status", ylab="Frequency", col=1:6)
+legend("topright", legend=levels(vote), pch=15, col=1:6, cex=0.8)
+
+tabOM
+prop.table(tabOM)
+fisher.test(orien, marriage, simulate.p.value=TRUE)
+chisq.test(orien, marriage, simulate.p.value=TRUE)
+barplot(tabOM, main="Political_Orientation/Marital_Status Plot", ylim=c(0, 500), xlab="Marital Status", ylab="Frequency", col=1:8)
+legend("topright", legend=levels(orien), pch=15, col=1:8, cex=0.8)
+
+
+
+
+
+
+
+
+#------------------ Categorical-Quantitative Variables ------------------#
+
+#-----Gender~Age, Years of Residence, Income-----#
+#2 subcategories -> t.tests, wilcoxon tests
+
+tapply(data$Age, data$Gender, shapiro.test) #NOT normal -> wilcoxon
+leveneTest(data$Age, data$Gender) #homoscedasticity OK
+tapply(data$Age, data$Gender, skew) #neglibible skew -> I'll try t.test too
+t.test(Age~Gender, data, var.equal=T) #NO significant difference between the sexes
+plotmeans(Age~Gender, data, connect=F, main="Age~Gender ErrorBars",)
+wilcox.test(Age~Gender, data) #NO significant difference between the sexes
+boxplot(Age~Gender, data, main="Age~Gender BoxPlot", col=2:3) 
+
+
+tapply(data$Years_of_residence, data$Gender, shapiro.test) #NOT normal -> wilcoxon
+leveneTest(data$Years_of_residence, data$Gender) #homoscedasticity OK
+tapply(data$Years_of_residence, data$Gender, skew) #mean is not the proper measure
+wilcox.test(Years_of_residence~Gender, data) #NO significant difference between the sexes
+boxplot(Years_of_residence~Gender, data, main="Years of Residence~Gender BoxPlot", col=2:3)
+
+
+tapply(data$Income, data$Gender, shapiro.test) #NOT normal -> wilcoxon
+leveneTest(data$Income, data$Gender) #homoscedasticity OK for a=0.05
+tapply(data$Income, data$Gender, skew) #mean is not the proper measure
+wilcox.test(Income~Gender, data) #YES significant difference between the sexes
+boxplot(Income~Gender, data, main="Income~Gender BoxPlot", col=2:3) 
+
+
+
+
+#-----Vote~Age, Years of Residence, Income-----#
+#>2 subcategories -> anova, Kruskal-Wallis tests
+
+#Anova
+anova = aov(Age~Vote, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#Homoscedasticity OK 
+leveneTest(anova)
+#YES significant difference between the voters
+kruskal.test(Age~Vote, data) 
+boxplot(Age~Vote, data, main="Vote~Age BoxPlot", col=2:7) 
+
+
+#Anova
+anova = aov(Years_of_residence~Vote, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#NOT Homoscedastic
+leveneTest(anova)
+#YES significant difference between the voters
+kruskal.test(Years_of_residence~Vote, data)
+boxplot(Years_of_residence~Vote, data, main="Vote~Years of Residence BoxPlot", col=2:7)
+
+
+#Anova
+anova = aov(Income~Vote, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#Homoscedasticity OK 
+leveneTest(anova)
+#YES significant difference between the voters
+kruskal.test(Income~Vote, data)
+boxplot(Income~Vote, data, main="Vote~Income BoxPlot", col=2:7) 
+
+
+
+
+
+#-----Political Orientation~Age, Years of Residence, Income-----#
+#>2 subcategories -> anova, Kruskal-Wallis tests
+
+#Anova
+anova = aov(Age~Political_orientation, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#Homoscedasticity OK for a=0.1
+leveneTest(anova)
+#YES significant difference between different orientations
+kruskal.test(Age~Political_orientation, data) 
+boxplot(Age~Political_orientation, data, main="Political Orientation~Age BoxPlot", col=2:8)
+
+
+#Anova
+anova = aov(Years_of_residence~Political_orientation, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#Homoscedasticity OK
+leveneTest(anova)
+#YES significant difference between different orientations
+kruskal.test(Years_of_residence~Political_orientation, data)
+boxplot(Years_of_residence~Political_orientation, data,
+        main="Political Orientation~Years of Residence BoxPlot", col=2:8)
+
+
+#Anova
+anova = aov(Income~Political_orientation, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#Homoscedasticity OK for a=0.001
+leveneTest(anova)
+#YES significant difference between different orientations
+kruskal.test(Income~Political_orientation, data) 
+#YES significant difference between different orientations
+boxplot(Income~Political_orientation, data, main="Political Orientation~Income BoxPlot", col=2:8)
+
+
+
+
+
+#-----Marital Status~Age, Years of Residence, Income-----#
+#>2 subcategories -> anova, Kruskal-Wallis tests
+
+#Anova
+anova = aov(Age~Marital_Status, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#NOT Homoscedastic
+leveneTest(anova)
+#YES significant difference between different marital statuses
+kruskal.test(Age~Marital_Status, data) 
+boxplot(Age~Marital_Status, data, main="Marital Status~Age BoxPlot", col=2:8)
+
+
+#Anova
+anova = aov(Years_of_residence~Marital_Status, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#NOT Homoscedastic
+leveneTest(anova)
+#YES significant difference between different marital statuses
+kruskal.test(Years_of_residence~Marital_Status, data)
+boxplot(Years_of_residence~Marital_Status, data,
+        main="Marital Status~Years of Residence BoxPlot", col=2:8)
+
+
+#Anova
+anova = aov(Income~Marital_Status, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#Homoscedasticity OK for a=0.05
+leveneTest(anova)
+#YES significant difference between different marital statuses
+kruskal.test(Income~Marital_Status, data) 
+boxplot(Income~Marital_Status, data, main="Marital Status~Income BoxPlot", col=2:8)
+
+
+
+

@@ -1,0 +1,95 @@
+
+  c("Helen", "Kate", "John", "Peter", "George", "Maria", "Tom", "Andrew", "David", "Sophie")
+colnames(x) = c("baros", "ypsos", "fylo")
+x
+
+
+#(c)
+weight = x[, "baros"]
+height = x[, "ypsos"]
+gender = x[, "fylo"]
+
+class(weight)
+class(height)
+class(gender)
+
+
+
+#(d)
+x[, "fylo"] = factor(x[, "fylo"], levels=c(0, 1), labels=c("female", "male"))
+
+
+
+#(e)
+skew<-function(x)
+{
+  n<-length(x)
+  z<-(x-mean(x))/sd(x)
+  return(sum(z^3)/n)
+}
+kurtosis<-function(x)
+{
+  n<-length(x)
+  z<-(x-mean(x))/sd(x)
+  return( (sum(z^4)/n) - 3 )
+}
+GetSkewKurtosis<-function(x){
+  return(list("Skew"=skew(x), "Kurtosis"=kurtosis(x)))
+}  
+
+summary(weight) #weight, height από (c)
+sd(weight)
+GetSkewKurtosis(weight)
+
+summary(height)
+sd(height)
+GetSkewKurtosis(height)
+
+# Το φύλο είναι δίτιμη κατηγορική μεταβλητή οπότε τα παραπάνω 
+# περιγραφικά μέτρα δεν έχει κάποιο νόημα να εφαρμοστούν
+
+
+
+#(f)
+tapply(x[,"ypsos"], x[,"fylo"], mean) #1-γυναίκες, 2-άντρες
+
+
+
+#(g)
+x2 = x[x[,"fylo"]==2, ]
+x2 = x2[order(x2[,"ypsos"], decreasing=T),]
+x2
+
+
+#(h)
+q = quantile(x[,"baros"], c(0, 0.33, 0.66, 1))
+
+baros2 = rep(1, 10)
+x = cbind(x, baros2)
+
+n = length(q)
+for(i in 1:n)
+  x[,"baros2"][x[,"baros"]>=q[i] & x[,"baros"]<=q[i+1]] = i  
+
+x[, "baros2"] = factor(x[, "baros2"], levels=c(1, 2, 3), labels=c("light", "medium", "heavy"))
+x = x[ ,-1] 
+x
+
+
+#(i)
+M = table(x[,"fylo"], x[,"baros2"])
+colnames(M) = c("light", "medium", "heavy")
+rownames(M) = c("female", "male")
+ 
+barplot(M, xlab="weight category", ylab="# of observations(people)", col=1:2)
+legend("bottomright", legend=c("Female", "Male"), pch=16, col=1:2, cex=0.8)
+
+
+
+#(j)
+M # πίνακας συνάφειας(συχνοτήτων)
+prop.table(M) # πίνακας σχετικών συχνοτήτων
+prop.table(M, margin=1) # ανά γραμμή
+prop.table(M, margin=2) # ανά στήλη
+
+

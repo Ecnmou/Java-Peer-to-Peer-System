@@ -1,0 +1,99 @@
+
+#--------------------------- 2 ---------------------------#
+
+B = matrix(c(1930, 1940, 1950, 1965, 1973, 1982, 1987, 1992, 2010,
+             59.7, 62.9, 70.2, 69.7, 71.4, 74.1, 75, 75.7, 78.7),
+           nrow=9, ncol=2)
+colnames(B) = c("Birth_Year", "Life_Expc")
+B
+B = as.data.frame(B)
+
+#(i)
+#Independent variable: Birth Year, dependent variable: Life Expectancy
+
+
+#(ii)
+plot(B$Birth_Year, B$Life_Expc, ylab="Life Expectancy", xlab="Birth Year", pch=16,
+     ylim=c(58, 80), main="B.Year+L.Exp ScatterPlot")
+
+
+#(iii)
+model = lm(Life_Expc ~ Birth_Year, data=B)
+abline(model, col='red')
+
+
+#(iv)
+cor(B$Birth_Year, B$Life_Expc) #pearson
+cor(B$Birth_Year, B$Life_Expc, method = "kendall")
+cor(B$Birth_Year, B$Life_Expc, method = "spearman")
+#our data are highly, positively correlated, as it is obvious from the plot above.
+#The last decades there had been less wars and healthcare was drammatically improved
+#so people tend to live longer than the used to back in the early 1900.
+
+
+#(v)
+predict(model, newdata=data.frame(Birth_Year=c(1950, 1982)))
+summary(model)
+#Because for the predicted values to be exactly the same with the observed values,
+#model's' adjusted R^2 should be equal to 1 and Residual standard error=0.
+#That would mean that our model would explain 100% of the response variable's
+#variability and as a result the predictions would be 100% precise
+#(exactly the same with the observed values).
+
+
+#(vi)
+#Based on pearson's linear correlation(=0.96) and the created model there is a 
+#strong linear relationship between sb's birth year and his life's expectancy
+
+
+#(vii)
+#Outliers
+plot(B$Birth_Year, rstandard(model), ylim=c(-3,3), pch=16)
+abline(h=2, col='red')
+abline(h=-2, col='red')
+
+#cook distance
+aov(model)
+plot(model, pch=16, which=4)
+abline(h=4/7, col='red') #h = 4/(n-p-1) = 4/(9-1-1) = 4/7
+
+#Leverage Points
+lev = hatvalues(model)
+plot(lev, type="h", main="Leverage points", 
+     xlab="Number of Observation", ylab="Leverage", ylim=c(0,1))
+c_v = 2*(1+1)/9 #2*(p+1)/n
+abline(h=c_v, col=2:3)
+#Based on the graphs there are outliers in our data.
+
+
+#(viii)
+#bo is statistically significant, so I centralize my 
+#model for bo to have a realistic interpretation
+mu = mean(B$Birth_Year)
+centeredModel = lm(Life_Expc ~ I(Birth_Year-mu), data=B)
+summary(centeredModel)
+
+#bo: if someone is born in 1970(mu~=1970), his 
+#life expectancy is expected to be bo=70.8222 years.
+
+#b1: if we compare two people, with one of them being a year 
+#older than the other(time unit = 1 year), the younger's 
+#life expectancy is expected to be b1=0.23 years longer.
+
+#Adjusted R-squared: our predictor variable(Birth year)
+#explains 91.5% of the response variable's
+#variation, which makes for really accurate predictions.
+
+
+#Checking conditions, back to the non-centered model
+shapiro.test(B$Life_Expc) #normality ok
+shapiro.test(model$res) #residual normality ok for a=0.05
+
+durbinWatsonTest(model) #uncorrelated errors
+
+ncvTest(model) #homoscedasticity ok for a=0.05
+
+plot(B$Birth_Year-mean(B$Birth_Year), B$Life_Expc, pch=16)
+plot(model$fit, rstandard(model), pch=16) #linearity
+
+

@@ -1,0 +1,86 @@
+library('corrr')
+library(factoextra)
+library(psych)
+
+data_beck = read.tablocessed.txt", header=T, dec=',')
+str(data_beck)
+head(data_beck)
+
+data1 = data_beck[, c(2:22,32)]
+head(data1)
+
+#------------------- PCA  -------------------#
+
+boxplot(data1)
+bartlett.test(data1)
+#there is no homoskedasticity so we prefer the correlation matrix
+
+crl = cor(data1)
+ggcorrplot(crl)
+f = sqrt((sum(crl^2)-22)/(21*22)) 
+f # f=0.215 < 0.4  -> not good
+
+pca = princomp(X, cor = T, scores = T)
+pca
+summary(pca)
+
+eigen(cor(X))$values
+# 7 eigenvalues > 1 -> 7 principal componets
+fviz_eig(pca, addlabels = TRUE)
+# 5 or 6 principal componets (subjective)
+# I choose to keep 5 components
+fviz_pca_var(pca, col.var = "black")
+
+pca$scores
+pca$loadings
+print(pca$loadings, cutoff=0.3)
+
+
+
+
+
+#------------------- Factor Analysis - Demographic Comparisons -------------------#
+
+KMO(data1) # Overall MSA = 0.79 -> quite good
+fa = factanal(data1, factors = 5, rotation = 'varimax', scores = 'regression')
+fa
+
+print(fa$loadings, cutoff=0.3) # gia na dw ta loadings tou factor analysis se poies omades anhkei h kathe erwthsh
+biplot(fa$scores, fa$loadings, cex = 0.5) 
+alpha(data1) 
+
+#---Demographic Comparisons 
+demographic = data_beck[,23:31]
+
+corTable = matrix(nrow=9, ncol=5)
+for (i in 1:9) 
+  for (j in 1:5) 
+    corTable[i,j] = cor(fa$scores[,j], demographic[,i])
+  
+
+rownames(corTable) = c("Age", "Gen", "Yrs in Uni", "Parent Education", "Hrs Online", "Working",
+                       "Hrs in courses", "Grade", "Courses left")
+colnames(corTable) = c("factor1", "factor2", "factor3", "factor4", "factor5")
+corTable = round(corTable, 2) 
+corTable
+
+
+
+
+
+#------------------- Anxiety index -------------------#
+# Perform PCA
+pca_result = principal(data1, nfactors = 5, rotate = "varimax")
+pca_result
+
+# Calculate factor scores
+factor_scores = predict(pca_result, data1)
+
+# Create anxiety index
+index = rowSums(factor_scores[, 1:5]) 
+totDepressionPoints = apply(data1, 1, sum)
+A = cbind(data_beck[,1], index, totDepressionPoints)
+
+
+
+

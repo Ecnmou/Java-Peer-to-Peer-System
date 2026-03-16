@@ -1,0 +1,36 @@
+#------------- Vote~Years of Residence -------------#
+
+par(mfrow=c(1, 1))
+
+#Anova
+anova = aov(Years_of_residence~Vote, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#NOT Homoscedastic
+leveneTest(anova)
+#YES significant difference between the voters
+kruskal.test(Years_of_residence~Vote, data)
+boxplot(Years_of_residence~Vote, data, main="Vote~Years of Residence BoxPlot", col=2:7)
+
+
+
+#------------- Political Orientation~Years of Residence -------------#
+
+#Anova
+anova = aov(Years_of_residence~Political_orientation, data)
+summary(anova)
+#NOT normal -> Kruskal-Wallis(categories with <50 observations)
+shapiro.test(anova$residuals)
+lillie.test(anova$residuals)
+qqnorm(anova$residuals)
+qqline(anova$residuals, col=2)
+#Homoscedasticity OK
+leveneTest(anova)
+#YES significant difference between different orientations
+kruskal.test(Years_of_residence~Political_orientation, data)
+boxplot(Years_of_residence~Political_orientation, data,
+        main="Political Orientation~Years of Residence BoxPlot", col=2:8)

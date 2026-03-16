@@ -1,0 +1,98 @@
+#---------------Reading data, basic data info
+library(haven)
+library()
+library(MASS)
+data ientation)$labels
+attribut
+orien = as.factor(orien)
+levels(orien) = c("Extremely liberal", "Liberal", "Slightly liberal", "Moderate"
+                  , "Slightly conservative", "Conservative", "Extremely conservative", "IDK/Refused")
+data$Political_orientation = orien
+
+{
+  n<-length(x)
+  z<-(x-mean(x))/sd(x)
+  return(sum(z^3)/n)
+}
+kurtosis=function(x)
+{
+  n<-length(x)
+  z<-(x-mean(x))/sd(x)
+  return( (sum(z^4)/n) - 3 )
+}
+GetDescrStats=function(x)
+{
+  return(list("Missing Values"=sum(is.na(x)), "Summary"=summary(x),
+    "Standard Deviation"=sd(x), "Skew"=skew(x), "Kurtosis"=kurtosis(x)))
+}  
+
+
+
+
+
+#---------------Descriptive measures of quantitative variables and respective boxplots
+GetDescrStats(data$Age)
+GetDescrStats(data$Years_of_residence)
+GetDescrStats(data$Income)
+
+par(mfrow=c(1, 3))
+boxplot(data$Age,_orientation)
+t3
+t3/n
+
+t4 = table(data$Marital_Status)
+t4
+t4/n
+
+par(mfrow=c(2, 2))
+barplot(t1, main="Gender Barplot", ylab="Frequency", col=1, ylim=c(0, 600))
+barplot(t2, main="Vote Barplot", ylab="Frequency", col=2, ylim=c(0, 350))
+barplot(t3, main="Political Orientation Barplot", ylab="Frequency", col=3)
+barplot(t4, main="Marital Status Barplot", ylab="Frequency", col=4)
+
+
+
+
+#1, 2, 3, 4 studing quantitative variables
+#---------------Histograms of quantitative variables (1)
+par(mfrow=c(1, 3))
+createCurve = function()
+{
+  x = seq(min(current), max(current), length = 100)
+  y = dnorm(x, mean(current), sd(current)) 
+  y = y * diff(Hist$mids[1:2]) 
+qqline(current, col=2)
+
+
+
+
+
+#---------------Normality tests for quantitative variables (3)
+#Shapiro-Wilk, Lilliefors(Kolmogorov-Smirnov) tests
+shapiro.test(data$Age)
+shapiro.test(data$Years_of_residence)
+shapiro.test(data$Income)
+
+lillie.test(data$Age)
+lillie.test(data$Years_of_residence)
+lillie.test(data$Income)
+#None of them is normal, p-values really small. Obvious from the previous plots
+#neither with log transformation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
